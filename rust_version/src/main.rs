@@ -1,21 +1,40 @@
 use rand::Rng;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::path::Path;
+extern crate reqwest;
+
+use std::fs::File;
+use std::io;
 
 //cargo run --release
 fn main() {
+    let n = 10;
+    let input = "http://cs.stanford.edu/people/karpathy/char-rnn/shakespeare_input.txt";
     //let file_name = "../msg_mock.txt";
     //let file_name = "../shakespeare_input.txt";
-    let file_name = "../test_shakes.txt";
-    let lm = train_char_lm(file_name, 4);
+    //let file_name = "../test_shakes.txt";
+    let lm = train_char_lm(input, n);
+    // println!("{:?}", lm);
     // println!("{:?}", lm["Firs"]);
-    let msg = generate_text(&lm, 4, 1000);
+    // println!("{:?}", lm["ello"]);
+    let msg = generate_text(&lm, n, 1000);
     println!("{}", msg);
 }
 
 //The Language Model
 type Tlm = HashMap<String, Vec<(char, i32)>>;
 type Lm = HashMap<String, Vec<(char, f64)>>;
+
+fn file_namer(url: &str) -> &str {
+    let v: Vec<&str> = url.split('/').collect();
+    v.last().expect("bad url")
+}
+fn file_download(url: &str, file: &str) {
+    let mut resp = reqwest::get(url).expect("request failed");
+    let mut out = File::create(file).expect("failed to create file");
+    io::copy(&mut resp, &mut out).expect("failed to copy content");
+}
 
 fn normalize(accum: &[(char, i32)]) -> Vec<(char, f64)> {
     //let s: f64 = accum.iter().map(|a| f64::from(a.1)).sum();
@@ -26,10 +45,16 @@ fn normalize(accum: &[(char, i32)]) -> Vec<(char, f64)> {
         .collect()
 }
 
-fn train_char_lm(filename: &str, order: usize) -> Lm {
-    let mut data = std::fs::read_to_string(filename).expect("could not read file");
+fn train_char_lm(url: &str, order: usize) -> Lm {
+    let path = Path::new(file_namer(url));
+    if !path.is_file() {
+        println!("{:?} not found, downloading...", path);
+        file_download(url, path.to_str().expect("bad path"))
+    }
+    let mut data = std::fs::read_to_string(path).expect("could not read file");
     //data = format!("{}{}", padding("~", order), &data);
-    data = padding("~", order) + &data;
+    // data = padding("~", order) + &data;
+    data = format!("{}{}", padding("~", order), &data);
     let mut tlm = Tlm::new();
     for i in 0..(data.len() - order) {
         // let history = history_by_indices(&data, i, i + order);
@@ -125,6 +150,7 @@ fn generate_letter(
     let hist = rewind(history, order);
     //boo: something is wrong with the indexing
     if !model.contains_key(&hist) {
+        println!("boo");
         return " ".to_string();
     }
     // println!("hist lookup: {}", hist);

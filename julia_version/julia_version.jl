@@ -1,7 +1,7 @@
 using DataStructures
 using BenchmarkTools
 shakespeare_input() = "http://cs.stanford.edu/people/karpathy/char-rnn/shakespeare_input.txt"
-linux_input() = "http://cs.stanford.edu/people/karpathy/char-rnn/linux_input.txt"
+#linux_input() = "http://cs.stanford.edu/people/karpathy/char-rnn/linux_input.txt"
 file_namer(url) = split(url,"/")[end]
 file_down(url,file) = download(url,file)
 padding(chr,num) = repeat(chr, num)
